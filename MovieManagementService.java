@@ -3,7 +3,7 @@ import java.util.stream.Collectors;
 
 public class MovieManagementService {
     private Map<Long, Movie> movies = new HashMap<>();
-    private Long movieCounter = 1L; // used to generate ids'
+    private Long movieCounter = 1L;
 
     public void addMovie(String title, List<Genre> genre, String director, Date releaseDate, List<Actor> cast) {
         Long movieID = generateNextMovieId();
@@ -12,7 +12,6 @@ public class MovieManagementService {
     }
 
     public void updateMovie(Long movieId, Movie updatedMovie) {
-        // check if movie exists
         if (movies.containsKey(movieId)) {
             Movie existingMovie = movies.get(movieId);
 

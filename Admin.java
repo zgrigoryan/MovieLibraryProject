@@ -1,5 +1,5 @@
 public class Admin extends User {
-    private String adminRole; // Role or responsibilities of the admin
+    private String adminRole;
 
     public Admin(Long id, String name, String email, String password, String adminRole) {
         super(id, name, email, password);

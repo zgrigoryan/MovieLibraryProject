@@ -3,81 +3,108 @@ import java.util.*;
 public class RegisteredUserService {
     private RegisteredUser user;
     private Map<Long, Movie> allMovies;
+    private Map<Long, User> allUsers;
     private Map<Long, List<Movie>> userWatchlists;
-    private Map<Long, List<String>> userReviews;
+    private Map<Long, Map<Long, String>> userReviews;
     private Map<Long, Map<Long, Double>> movieRatings;
     private Map<Long, List<User>> userFollowers;
+    private Map<Long, Map<String, CustomList>> userCustomLists;
 
-    public RegisteredUserService(RegisteredUser user, Map<Long, Movie> allMovies) {
+    public RegisteredUserService(RegisteredUser user, Map<Long, Movie> allMovies, Map<Long, User> allUsers) {
         this.user = user;
         this.allMovies = allMovies;
+        this.allUsers = allUsers;
         this.userWatchlists = new HashMap<>();
         this.userReviews = new HashMap<>();
-        this.userFollowers = new HashMap<>();
         this.movieRatings = new HashMap<>();
+        this.userFollowers = new HashMap<>();
+        this.userCustomLists = new HashMap<>();
     }
 
     public boolean login(String email, String password) {
-        if (user != null && user.getEmail().equals(email) && user.getPassword().equals(password)) {
+        if (user != null && user.getEmail().equalsIgnoreCase(email) && user.getPassword().equals(password)) {
             System.out.println(user.getName() + " logged in successfully!");
-            return true; // successful login
+            return true;
         }
         System.out.println("Login failed. Invalid email or password.");
-        return false; // login failed
+        return false;
     }
 
     public void followUser(User otherUser) {
-        if (!userFollowers.containsKey(user.getId())) {
-            userFollowers.put(user.getId(), new ArrayList<>());
-        }
-        userFollowers.get(user.getId()).add(otherUser);
+        userFollowers.computeIfAbsent(user.getId(), k -> new ArrayList<>()).add(otherUser);
         System.out.println(user.getName() + " is now following " + otherUser.getName());
     }
 
     public void rateMovie(Movie movie, Double rating) {
-        if (movieRatings.containsKey(movie.getId())) {
-            movieRatings.get(movie.getId()).put(user.getId(), rating);
-        } else {
-            Map<Long, Double> ratings = new HashMap<>();
-            ratings.put(user.getId(), rating);
-            movieRatings.put(movie.getId(), ratings);
-        }
-        System.out.println(user.getName() + " rated the movie " + movie.getTitle() + " with " + rating);
+        movieRatings.computeIfAbsent(movie.getId(), k -> new HashMap<>()).put(user.getId(), rating);
+        System.out.println(user.getName() + " rated the movie \"" + movie.getTitle() + "\" with " + rating);
+
+        Map<Long, Double> ratings = movieRatings.get(movie.getId());
+        double averageRating = ratings.values().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        movie.setAverageRating(averageRating);
     }
 
     public void writeReview(Movie movie, String review) {
-        if (!userReviews.containsKey(movie.getId())) {
-            userReviews.put(movie.getId(), new ArrayList<>());
-        }
-        userReviews.get(movie.getId()).add(review);
-        System.out.println(user.getName() + " wrote a review for " + movie.getTitle() + ": " + review);
+        userReviews.computeIfAbsent(movie.getId(), k -> new HashMap<>()).put(user.getId(), review);
+        System.out.println(user.getName() + " wrote a review for \"" + movie.getTitle() + "\": " + review);
     }
 
     public void editReview(Movie movie, String updatedReview) {
-        if (userReviews.containsKey(movie.getId()) && !userReviews.get(movie.getId()).isEmpty()) {
-            userReviews.get(movie.getId()).set(0, updatedReview); // Replace the first review (assuming one review per movie)
-            System.out.println(user.getName() + " updated the review for " + movie.getTitle() + ": " + updatedReview);
+        Map<Long, String> reviews = userReviews.get(movie.getId());
+        if (reviews != null && reviews.containsKey(user.getId())) {
+            reviews.put(user.getId(), updatedReview);
+            System.out.println(user.getName() + " updated the review for \"" + movie.getTitle() + "\": " + updatedReview);
         } else {
-            System.out.println("No review found to edit for " + movie.getTitle());
+            System.out.println("No existing review found for \"" + movie.getTitle() + "\" to update.");
         }
     }
 
     public void createList(String name, String description) {
-        System.out.println(user.getName() + " created a list: " + name + " - " + description);
+        Map<String, CustomList> userLists = userCustomLists.computeIfAbsent(user.getId(), k -> new HashMap<>());
+        if (userLists.containsKey(name)) {
+            System.out.println("A list with the name \"" + name + "\" already exists.");
+        } else {
+            CustomList customList = new CustomList(name, description);
+            userLists.put(name, customList);
+            System.out.println(user.getName() + " created a list: " + name + " - " + description);
+        }
+    }
+    public void addToList(String listName, Movie movie) {
+        Map<String, CustomList> userLists = userCustomLists.get(user.getId());
+        if (userLists != null && userLists.containsKey(listName)) {
+            CustomList customList = userLists.get(listName);
+            customList.addMovie(movie);
+            System.out.println("\"" + movie.getTitle() + "\" added to the list \"" + listName + "\".");
+        } else {
+            System.out.println("List \"" + listName + "\" does not exist.");
+        }
+    }
+    public void viewList(String listName) {
+        Map<String, CustomList> userLists = userCustomLists.get(user.getId());
+        if (userLists != null && userLists.containsKey(listName)) {
+            CustomList customList = userLists.get(listName);
+            System.out.println(customList);
+        } else {
+            System.out.println("List \"" + listName + "\" does not exist.");
+        }
     }
 
     public void addToWatchlist(Movie movie) {
-        if (!userWatchlists.containsKey(user.getId())) {
-            userWatchlists.put(user.getId(), new ArrayList<>());
-        }
-        userWatchlists.get(user.getId()).add(movie);
-        System.out.println(movie.getTitle() + " added to " + user.getName() + "'s watchlist.");
+        userWatchlists.computeIfAbsent(user.getId(), k -> new ArrayList<>()).add(movie);
+        System.out.println("\"" + movie.getTitle() + "\" added to " + user.getName() + "'s watchlist.");
     }
 
-    // TODO
-    public List<Movie> receiveRecommendations() {
-        List<Movie> allMovieList = new ArrayList<>(allMovies.values());
-        Collections.shuffle(allMovieList); // random recommendations
-        return allMovieList.subList(0, Math.min(3, allMovieList.size()));
+    public List<Movie> receiveRecommendations(int n) {
+        RecommendationEngine engine = new RecommendationEngine(allUsers, allMovies);
+
+        List<Movie> recommendationsByPreference = engine.analyzeByPreference(user);
+        List<Movie> recommendationsByOthers = engine.compareWithOtherUsers(user);
+
+        Set<Movie> recommendationSet = new LinkedHashSet<>();
+        recommendationSet.addAll(recommendationsByPreference);
+        recommendationSet.addAll(recommendationsByOthers);
+
+        // n represents the number of movie recommendations user wants to receive
+        return new ArrayList<>(recommendationSet).subList(0, Math.min(n, recommendationSet.size()));
     }
 }
