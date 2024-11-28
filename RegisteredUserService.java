@@ -8,7 +8,7 @@ public class RegisteredUserService {
     private Map<Long, Map<Long, String>> userReviews;
     private Map<Long, Map<Long, Double>> movieRatings;
     private Map<Long, List<User>> userFollowers;
-    private Map<Long, Map<String, CustomList>> userCustomLists;
+    private Map<Long, Map<String, MovieList>> userCustomLists;
 
     public RegisteredUserService(RegisteredUser user, Map<Long, Movie> allMovies, Map<Long, User> allUsers) {
         this.user = user;
@@ -40,7 +40,10 @@ public class RegisteredUserService {
         System.out.println(user.getName() + " rated the movie \"" + movie.getTitle() + "\" with " + rating);
 
         Map<Long, Double> ratings = movieRatings.get(movie.getId());
-        double averageRating = ratings.values().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        double averageRating = ratings.values().stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
         movie.setAverageRating(averageRating);
     }
 
@@ -60,19 +63,19 @@ public class RegisteredUserService {
     }
 
     public void createList(String name, String description) {
-        Map<String, CustomList> userLists = userCustomLists.computeIfAbsent(user.getId(), k -> new HashMap<>());
+        Map<String, MovieList> userLists = userCustomLists.computeIfAbsent(user.getId(), k -> new HashMap<>());
         if (userLists.containsKey(name)) {
             System.out.println("A list with the name \"" + name + "\" already exists.");
         } else {
-            CustomList customList = new CustomList(name, description);
-            userLists.put(name, customList);
+            MovieList movieList = new MovieList(name, description);
+            userLists.put(name, movieList);
             System.out.println(user.getName() + " created a list: " + name + " - " + description);
         }
     }
     public void addToList(String listName, Movie movie) {
-        Map<String, CustomList> userLists = userCustomLists.get(user.getId());
+        Map<String, MovieList> userLists = userCustomLists.get(user.getId());
         if (userLists != null && userLists.containsKey(listName)) {
-            CustomList customList = userLists.get(listName);
+            MovieList customList = userLists.get(listName);
             customList.addMovie(movie);
             System.out.println("\"" + movie.getTitle() + "\" added to the list \"" + listName + "\".");
         } else {
@@ -80,10 +83,10 @@ public class RegisteredUserService {
         }
     }
     public void viewList(String listName) {
-        Map<String, CustomList> userLists = userCustomLists.get(user.getId());
+        Map<String, MovieList> userLists = userCustomLists.get(user.getId());
         if (userLists != null && userLists.containsKey(listName)) {
-            CustomList customList = userLists.get(listName);
-            System.out.println(customList);
+            MovieList movieList = userLists.get(listName);
+            System.out.println(movieList);
         } else {
             System.out.println("List \"" + listName + "\" does not exist.");
         }

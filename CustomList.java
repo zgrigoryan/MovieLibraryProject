@@ -1,11 +1,11 @@
 import java.util.*;
 
-class CustomList {
+class MovieList {
     private String name;
     private String description;
     private List<Movie> movies;
 
-    public CustomList(String name, String description) {
+    public MovieList(String name, String description) {
         this.name = name;
         this.description = description;
         this.movies = new ArrayList<>();

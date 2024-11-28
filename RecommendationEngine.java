@@ -37,33 +37,37 @@ public class RecommendationEngine {
         }
 
         RegisteredUser registeredUser = (RegisteredUser) user;
-        List<Movie> userLikedMovies = registeredUser.getLikedMovies();
-
         Map<Movie, Integer> recommendationScores = new HashMap<>();
 
-        for (User otherUser : allUsers.values()) {
-            if (otherUser.equals(user) || !(otherUser instanceof RegisteredUser)) {
-                continue;
-            }
-
-            RegisteredUser otherRegisteredUser = (RegisteredUser) otherUser;
-            List<Movie> otherUserLikedMovies = otherRegisteredUser.getLikedMovies();
-
-            Set<Movie> commonMovies = new HashSet<>(userLikedMovies);
-            commonMovies.retainAll(otherUserLikedMovies);
-
-            if (!commonMovies.isEmpty()) {
-                for (Movie movie : otherUserLikedMovies) {
-                    if (!userLikedMovies.contains(movie)) {
-                        recommendationScores.put(movie, recommendationScores.getOrDefault(movie, 0) + 1);
-                    }
-                }
-            }
-        }
+        allUsers.values().stream()
+                .filter(otherUser -> otherUser instanceof RegisteredUser)
+                .filter(otherUser -> !otherUser.equals(user))
+                .map(otherUser -> (RegisteredUser) otherUser)
+                .forEach(otherRegisteredUser ->
+                        processRecommendations(registeredUser, otherRegisteredUser, recommendationScores)
+                );
 
         return recommendationScores.entrySet().stream()
-                .sorted(Map.Entry.<Movie, Integer>comparingByValue(Comparator.reverseOrder()))
+                .sorted(Map.Entry.<Movie, Integer>comparingByValue())
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
+    }
+
+    private void processRecommendations(RegisteredUser registeredUser, RegisteredUser otherRegisteredUser,
+                                        Map<Movie, Integer> recommendationScores) {
+
+        List<Movie> userLikedMovies = registeredUser.getLikedMovies();
+        List<Movie> otherUserLikedMovies = otherRegisteredUser.getLikedMovies();
+
+        boolean hasCommonMovies = otherUserLikedMovies.stream()
+                .anyMatch(userLikedMovies::contains);
+
+        if (hasCommonMovies) {
+            otherUserLikedMovies.stream()
+                    .filter(movie -> !userLikedMovies.contains(movie))
+                    .forEach(movie ->
+                            recommendationScores.merge(movie, 1, Integer::sum)
+                    );
+        }
     }
 }
