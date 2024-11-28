@@ -1,5 +1,9 @@
+package service;
+
 import java.util.*;
 import java.util.stream.Collectors;
+import model.*;
+
 
 public class RecommendationEngine {
 
