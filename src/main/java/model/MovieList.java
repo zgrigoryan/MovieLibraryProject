@@ -1,9 +1,9 @@
-package model;
+package src.main.java.model;
 
 import java.util.*;
+import src.main.java.service.*;
 
-
-class MovieList {
+public class MovieList {
     private String name;
     private String description;
     private List<Movie> movies;

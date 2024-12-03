@@ -1,8 +1,8 @@
-package service;
+package src.main.java.service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import model.*;
+import src.main.java.model.*;
 
 
 public class RecommendationEngine {
