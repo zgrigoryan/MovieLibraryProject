@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:latest
@@ -10,8 +12,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql  # Mount the SQL script here
+    networks:
+      - my_network
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -23,5 +27,6 @@ services:
     ports:
       - "8080:80"
 
-volumes:
-  postgres_data:
+networks:
+  my_network:
+    driver: bridge
