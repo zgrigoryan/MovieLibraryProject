@@ -22,14 +22,6 @@ public class CreateTables {
             "name TEXT" +
             ");";
 
-    private static final String CREATE_N2N_MOVIE_TO_GENRE_TABLE = "CREATE TABLE IF NOT EXISTS n2n_movie_to_genre (" +
-            "movie_id INT NOT NULL, " +
-            "genre_id INT NOT NULL, " +
-            "PRIMARY KEY (movie_id, genre_id), " +
-            "FOREIGN KEY (movie_id) REFERENCES movie(id) ON DELETE CASCADE, " +
-            "FOREIGN KEY (genre_id) REFERENCES def_genre(id) ON DELETE CASCADE" +
-            ");";
-
     private static final String CREATE_MOVIE_TABLE = "CREATE TABLE IF NOT EXISTS movie (" +
             "id SERIAL PRIMARY KEY, " +
             "title TEXT, " +
@@ -38,12 +30,12 @@ public class CreateTables {
             "average_rating DECIMAL(3, 2)" +
             ");";
 
-    private static final String CREATE_N2N_USER_TO_MOVIE_TABLE = "CREATE TABLE IF NOT EXISTS n2n_user_to_movie (" +
-            "user_id INT NOT NULL, " +
-            "actor_id INT NOT NULL, " +
-            "PRIMARY KEY (user_id, actor_id), " +
-            "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE, " +
-            "FOREIGN KEY (actor_id) REFERENCES actor(id) ON DELETE CASCADE" +
+    private static final String CREATE_N2N_MOVIE_TO_GENRE_TABLE = "CREATE TABLE IF NOT EXISTS n2n_movie_to_genre (" +
+            "movie_id INT NOT NULL, " +
+            "genre_id INT NOT NULL, " +
+            "PRIMARY KEY (movie_id, genre_id), " +
+            "FOREIGN KEY (movie_id) REFERENCES movie(id) ON DELETE CASCADE, " +
+            "FOREIGN KEY (genre_id) REFERENCES def_genre(id) ON DELETE CASCADE" +
             ");";
 
     private static final String CREATE_N2N_MOVIE_TO_ACTOR_TABLE = "CREATE TABLE IF NOT EXISTS n2n_movie_to_actor (" +
@@ -54,7 +46,7 @@ public class CreateTables {
             "FOREIGN KEY (actor_id) REFERENCES actor(id) ON DELETE CASCADE" +
             ");";
 
-    private static final String CREATE_USER_TABLE = "CREATE TABLE IF NOT EXISTS user (" +
+    private static final String CREATE_USER_TABLE = "CREATE TABLE IF NOT EXISTS \"user\" (" +
             "id SERIAL PRIMARY KEY, " +
             "name TEXT, " +
             "email TEXT, " +
@@ -70,7 +62,7 @@ public class CreateTables {
             "user_id INT NOT NULL, " +
             "role_id INT NOT NULL, " +
             "PRIMARY KEY (user_id, role_id), " +
-            "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE, " +
+            "FOREIGN KEY (user_id) REFERENCES \"user\"(id) ON DELETE CASCADE, " +
             "FOREIGN KEY (role_id) REFERENCES def_roe(id) ON DELETE CASCADE" +
             ");";
 
@@ -78,30 +70,34 @@ public class CreateTables {
             "id SERIAL PRIMARY KEY, " +
             "user_id INT NOT NULL, " +
             "movie_id INT NOT NULL, " +
-            "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE, " +
+            "FOREIGN KEY (user_id) REFERENCES \"user\"(id) ON DELETE CASCADE, " +
             "FOREIGN KEY (movie_id) REFERENCES movie(id) ON DELETE CASCADE" +
             ");";
 
     private static Connection connect() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        try {
+            Class.forName("org.postgresql.Driver");
+            return DriverManager.getConnection(URL, USER, PASSWORD);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new SQLException("PostgreSQL driver not found", e);
+        }
     }
 
     public static void createTables() {
         try (Connection connection = connect(); Statement statement = connection.createStatement()) {
+
             statement.executeUpdate(CREATE_ACTOR_TABLE);
             System.out.println("Actor table created successfully.");
 
             statement.executeUpdate(CREATE_DEF_GENRE_TABLE);
             System.out.println("Def_genre table created successfully.");
 
-            statement.executeUpdate(CREATE_N2N_MOVIE_TO_GENRE_TABLE);
-            System.out.println("N2N_movie_to_genre table created successfully.");
-
             statement.executeUpdate(CREATE_MOVIE_TABLE);
             System.out.println("Movie table created successfully.");
 
-            statement.executeUpdate(CREATE_N2N_USER_TO_MOVIE_TABLE);
-            System.out.println("N2N_user_to_movie table created successfully.");
+            statement.executeUpdate(CREATE_N2N_MOVIE_TO_GENRE_TABLE);
+            System.out.println("N2N_movie_to_genre table created successfully.");
 
             statement.executeUpdate(CREATE_N2N_MOVIE_TO_ACTOR_TABLE);
             System.out.println("N2N_movie_to_actor table created successfully.");
