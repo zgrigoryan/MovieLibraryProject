@@ -1,7 +1,7 @@
-package service;
+package src.main.java.service;
 
 import java.util.Map;
-import model.*;
+import src.main.java.model.*;
 
 public class UserManagementService {
     private Map<Long, User> users;

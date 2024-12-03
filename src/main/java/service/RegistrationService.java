@@ -1,7 +1,7 @@
-package service;
+package src.main.java.service;
 
 import java.util.*;
-import model.*;
+import src.main.java.model.*;
 
 public class RegistrationService {
     private Map<Long, User> users = new HashMap<>();

@@ -1,4 +1,4 @@
-package model;
+package src.main.java.model;
 
 public class Admin extends User {
     private String adminRole;
