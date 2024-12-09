@@ -1,4 +1,4 @@
-package src.main.java.model;
+package model;
 
 import java.util.Date;
 import java.util.List;
@@ -24,6 +24,9 @@ public class Movie {
     }
     public Movie(Long id, String title, List<Genre> genre, String director, Date releaseDate, List<Actor> cast){
         new Movie(id, title, genre, director, releaseDate, 0.0, cast);
+    }
+    public Movie(){
+        new Movie(0L, null, null, null, null, 0.0, null);
     }
 
     public Long getId() {

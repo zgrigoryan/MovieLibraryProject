@@ -1,13 +1,13 @@
-package src.main.java.service;
+package service;
 
-import java.util.Map;
-import src.main.java.model.*;
+import model.User;
+import repository.UserRepository;
 
 public class UserManagementService {
-    private Map<Long, User> users;
+    private UserRepository userRepository;
 
-    public UserManagementService(Map<Long, User> users) {
-        this.users = users;
+    public UserManagementService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     public void deleteUser(User user) {
@@ -16,8 +16,9 @@ public class UserManagementService {
             return;
         }
 
-        if (users.containsKey(user.getId())) {
-            users.remove(user.getId());
+        User existingUser = userRepository.getUserById(user.getId());
+        if (existingUser != null) {
+            userRepository.deleteUser(user.getId());
             System.out.println("User with ID " + user.getId() + " deleted successfully.");
         } else {
             System.out.println("User with ID " + user.getId() + " not found.");

@@ -1,29 +1,23 @@
-package src.main.java.service;
+package service;
 
-import java.util.*;
-import src.main.java.model.*;
+import model.*;
+import repository.UserRepository;
+import java.util.List;
 
 public class RegistrationService {
-    private Map<Long, User> users = new HashMap<>();
-    private Long userCounter = 1L;
+    private UserRepository userRepository;
+
+    public RegistrationService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     public Guest registerGuest(String name, String email, String password) {
-        if (email == null || email.isEmpty() || isEmailRegistered(email)) {
+        if (email == null || email.isEmpty() || userRepository.isEmailRegistered(email)) {
             throw new IllegalArgumentException("Invalid or already registered email");
         }
 
-        Long userId = generateNextUserId();
-        Guest newGuest = new Guest(userId, name, email, password);
-        users.put(userId, newGuest);
-
+        Guest newGuest = new Guest(null, name, email, password);
+        userRepository.addUser(newGuest, "GUEST");
         return newGuest;
-    }
-
-    private boolean isEmailRegistered(String email) {
-        return users.values().stream().anyMatch(user -> user.getEmail().equalsIgnoreCase(email));
-    }
-
-    private Long generateNextUserId() {
-        return userCounter++;
     }
 }
