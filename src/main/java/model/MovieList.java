@@ -1,17 +1,22 @@
-package src.main.java.model;
+package model;
 
 import java.util.*;
-import src.main.java.service.*;
-
+import service.*;
 public class MovieList {
+    private Long id;
     private String name;
     private String description;
     private List<Movie> movies;
 
-    public MovieList(String name, String description) {
+    public MovieList(Long id, String name, String description) {
+        this.id = id;
         this.name = name;
         this.description = description;
         this.movies = new ArrayList<>();
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public String getName() {

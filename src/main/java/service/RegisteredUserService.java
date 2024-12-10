@@ -1,107 +1,90 @@
-package src.main.java.service;
+package service;
 
+import model.*;
+import repository.*;
+import exception.*;
 import java.util.*;
-import src.main.java.model.*;
 
 public class RegisteredUserService {
     private RegisteredUser user;
-    private Map<Long, Movie> allMovies;
-    private Map<Long, User> allUsers;
-    private Map<Long, List<Movie>> userWatchlists;
-    private Map<Long, Map<Long, String>> userReviews;
-    private Map<Long, Map<Long, Double>> movieRatings;
-    private Map<Long, List<User>> userFollowers;
-    private Map<Long, Map<String, MovieList>> userCustomLists;
+    private MovieRepository movieRepository;
+    private UserRepository userRepository;
+    private MovieListRepository movieListRepository;
+    private RegisteredUserRepository registeredUserRepository;
 
-    public RegisteredUserService(RegisteredUser user, Map<Long, Movie> allMovies, Map<Long, User> allUsers) {
+    public RegisteredUserService(RegisteredUser user,
+                                 MovieRepository movieRepository,
+                                 UserRepository userRepository,
+                                 MovieListRepository movieListRepository,
+                                 RegisteredUserRepository registeredUserRepository) {
         this.user = user;
-        this.allMovies = allMovies;
-        this.allUsers = allUsers;
-        this.userWatchlists = new HashMap<>();
-        this.userReviews = new HashMap<>();
-        this.movieRatings = new HashMap<>();
-        this.userFollowers = new HashMap<>();
-        this.userCustomLists = new HashMap<>();
+        this.movieRepository = movieRepository;
+        this.userRepository = userRepository;
+        this.movieListRepository = movieListRepository;
+        this.registeredUserRepository = registeredUserRepository;
     }
 
     public boolean login(String email, String password) {
-        if (user != null && user.getEmail().equalsIgnoreCase(email) && user.getPassword().equals(password)) {
+        User foundUser = userRepository.getAllUsers().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(email) && u.getPassword().equals(password))
+                .findFirst()
+                .orElseThrow(() -> new InvalidCredentialsException("Login failed. Invalid email or password."));
+
+        if (foundUser instanceof RegisteredUser) {
+            this.user = (RegisteredUser) foundUser;
             System.out.println(user.getName() + " logged in successfully!");
             return true;
+        } else {
+            throw new InvalidCredentialsException("Login failed. User is not a registered user.");
         }
-        System.out.println("Login failed. Invalid email or password.");
-        return false;
     }
 
+    public void addToList(String listName, Movie movie) {
+        MovieList list = movieListRepository.getMovieListByName(user.getId(), listName)
+                .orElseThrow(() -> new NoSuchListException("List does not exist: " + listName));
+
+        movieListRepository.addMovieToList(list.getId(), movie.getId());
+        list.addMovie(movie);
+        System.out.println("\"" + movie.getTitle() + "\" added to the list \"" + listName + "\".");
+    }
+
+    public void viewList(String listName) {
+        MovieList movieList = movieListRepository.getMovieListByName(user.getId(), listName)
+                .orElseThrow(() -> new NoSuchListException("List does not exist: " + listName));
+
+        System.out.println(movieList);
+    }
     public void followUser(User otherUser) {
-        userFollowers.computeIfAbsent(user.getId(), k -> new ArrayList<>()).add(otherUser);
         System.out.println(user.getName() + " is now following " + otherUser.getName());
     }
 
     public void rateMovie(Movie movie, Double rating) {
-        movieRatings.computeIfAbsent(movie.getId(), k -> new HashMap<>()).put(user.getId(), rating);
         System.out.println(user.getName() + " rated the movie \"" + movie.getTitle() + "\" with " + rating);
-
-        Map<Long, Double> ratings = movieRatings.get(movie.getId());
-        double averageRating = ratings.values().stream()
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
-        movie.setAverageRating(averageRating);
     }
 
     public void writeReview(Movie movie, String review) {
-        userReviews.computeIfAbsent(movie.getId(), k -> new HashMap<>()).put(user.getId(), review);
         System.out.println(user.getName() + " wrote a review for \"" + movie.getTitle() + "\": " + review);
     }
 
     public void editReview(Movie movie, String updatedReview) {
-        Map<Long, String> reviews = userReviews.get(movie.getId());
-        if (reviews != null && reviews.containsKey(user.getId())) {
-            reviews.put(user.getId(), updatedReview);
-            System.out.println(user.getName() + " updated the review for \"" + movie.getTitle() + "\": " + updatedReview);
-        } else {
-            System.out.println("No existing review found for \"" + movie.getTitle() + "\" to update.");
-        }
+        System.out.println(user.getName() + " updated the review for \"" + movie.getTitle() + "\": " + updatedReview);
     }
 
     public void createList(String name, String description) {
-        Map<String, MovieList> userLists = userCustomLists.computeIfAbsent(user.getId(), k -> new HashMap<>());
-        if (userLists.containsKey(name)) {
-            System.out.println("A list with the name \"" + name + "\" already exists.");
-        } else {
-            MovieList movieList = new MovieList(name, description);
-            userLists.put(name, movieList);
-            System.out.println(user.getName() + " created a list: " + name + " - " + description);
-        }
-    }
-    public void addToList(String listName, Movie movie) {
-        Map<String, MovieList> userLists = userCustomLists.get(user.getId());
-        if (userLists != null && userLists.containsKey(listName)) {
-            MovieList customList = userLists.get(listName);
-            customList.addMovie(movie);
-            System.out.println("\"" + movie.getTitle() + "\" added to the list \"" + listName + "\".");
-        } else {
-            System.out.println("List \"" + listName + "\" does not exist.");
-        }
-    }
-    public void viewList(String listName) {
-        Map<String, MovieList> userLists = userCustomLists.get(user.getId());
-        if (userLists != null && userLists.containsKey(listName)) {
-            MovieList movieList = userLists.get(listName);
-            System.out.println(movieList);
-        } else {
-            System.out.println("List \"" + listName + "\" does not exist.");
-        }
+        movieListRepository.createMovieList(user.getId(), name, description);
+        System.out.println(user.getName() + " created a list: " + name + " - " + description);
     }
 
     public void addToWatchlist(Movie movie) {
-        userWatchlists.computeIfAbsent(user.getId(), k -> new ArrayList<>()).add(movie);
         System.out.println("\"" + movie.getTitle() + "\" added to " + user.getName() + "'s watchlist.");
     }
 
     public List<Movie> receiveRecommendations(int n) {
-        RecommendationEngine engine = new RecommendationEngine(allUsers, allMovies);
+        RecommendationEngineRepository recommendationRepo = new RecommendationEngineRepository();
+        RecommendationEngine engine = new RecommendationEngine(
+                recommendationRepo.getAllUsersMap(),
+                recommendationRepo.getAllMoviesMap()
+        );
 
         List<Movie> recommendationsByPreference = engine.analyzeByPreference(user);
         List<Movie> recommendationsByOthers = engine.compareWithOtherUsers(user);
@@ -110,7 +93,6 @@ public class RegisteredUserService {
         recommendationSet.addAll(recommendationsByPreference);
         recommendationSet.addAll(recommendationsByOthers);
 
-        // n represents the number of movie recommendations user wants to receive
         return new ArrayList<>(recommendationSet).subList(0, Math.min(n, recommendationSet.size()));
     }
 }
