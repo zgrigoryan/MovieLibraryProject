@@ -4,36 +4,44 @@ import model.*;
 import java.sql.*;
 import java.util.*;
 
+import static repository.Settings.*;
+
 public class GenreRepository {
 
-    private static final String URL = "jdbc:postgresql://localhost:5432/mydb";
-    private static final String USER = "admin";
-    private static final String PASSWORD = "password";
+    private static final String GET_GENRE_BY_ID_QUERY =
+            "SELECT * FROM def_genre WHERE id = ?";
 
-    public Genre getGenreById(Long id) {
-        String query = "SELECT * FROM def_genre WHERE id = ?";
+    private static final String ADD_GENRE_QUERY =
+            "INSERT INTO def_genre (name) VALUES (?)";
+
+    private static final String UPDATE_GENRE_QUERY =
+            "UPDATE def_genre SET name = ? WHERE id = ?";
+
+    private static final String DELETE_GENRE_QUERY =
+            "DELETE FROM def_genre WHERE id = ?";
+
+    public Optional<Genre> getGenreById(Long id) {
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(GET_GENRE_BY_ID_QUERY)) {
 
             stmt.setLong(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Genre g = new Genre();
-                    g.setId(rs.getLong("id"));
-                    g.setName(rs.getString("name"));
-                    return g;
+                    Genre genre = new Genre();
+                    genre.setId(rs.getLong("id"));
+                    genre.setName(rs.getString("name"));
+                    return Optional.of(genre);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return null;
+        return Optional.empty();
     }
 
     public void addGenre(Genre genre) {
-        String query = "INSERT INTO def_genre (name) VALUES (?)";
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(ADD_GENRE_QUERY, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, genre.getName());
             stmt.executeUpdate();
@@ -47,14 +55,13 @@ public class GenreRepository {
             e.printStackTrace();
         }
     }
-    public void updateGenre(Genre genre) {
-        String query = "UPDATE def_genre SET name = ? WHERE id = ?";
 
+    public void updateGenre(Genre genre) {
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(UPDATE_GENRE_QUERY)) {
 
             stmt.setString(1, genre.getName());
-            stmt.setLong(5, genre.getId());
+            stmt.setLong(2, genre.getId());
 
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -63,10 +70,8 @@ public class GenreRepository {
     }
 
     public void deleteGenre(Long genreId) {
-        String query = "DELETE FROM def_genre WHERE id = ?";
-
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(DELETE_GENRE_QUERY)) {
 
             stmt.setLong(1, genreId);
             stmt.executeUpdate();

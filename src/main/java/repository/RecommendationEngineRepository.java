@@ -3,22 +3,55 @@ package repository;
 import model.*;
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static repository.Settings.*;
 
 public class RecommendationEngineRepository {
 
-    private static final String URL = "jdbc:postgresql://localhost:5432/mydb";
-    private static final String USER = "admin";
-    private static final String PASSWORD = "password";
+    private static final String GET_ALL_REGISTERED_USERS_QUERY = "SELECT * FROM \"user\"";
 
-    public List<RegisteredUser> getAllRegisteredUsers() {
-        String query = "SELECT * FROM \"user\"";
-        List<RegisteredUser> users = new ArrayList<>();
+    private static final String GET_ALL_MOVIES_QUERY = "SELECT * FROM movie";
 
+    private static final String GET_LIKED_MOVIES_BY_USER_ID_QUERY =
+            "SELECT m.* FROM movie m " +
+                    "JOIN user_watchlist uw ON m.id = uw.movie_id " +
+                    "WHERE uw.user_id = ?";
+
+    private static final String GET_GENRES_BY_MOVIE_ID_QUERY =
+            "SELECT dg.* FROM def_genre dg " +
+                    "JOIN n2n_movie_to_genre mtg ON dg.id = mtg.genre_id " +
+                    "WHERE mtg.movie_id = ?";
+
+    private static final String GET_ACTORS_BY_MOVIE_ID_QUERY =
+            "SELECT a.* FROM actor a " +
+                    "JOIN n2n_movie_to_actor mta ON a.id = mta.actor_id " +
+                    "WHERE mta.movie_id = ?";
+
+    public Map<Long, RegisteredUser> getAllRegisteredUsers() {
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
+             ResultSet rs = stmt.executeQuery(GET_ALL_REGISTERED_USERS_QUERY)) {
 
-            while (rs.next()) {
+            return extractUsersFromResultSet(rs)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            RegisteredUser::getId,
+                            user -> user,
+                            (existing, replacement) -> existing
+                    ));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new HashMap<>();
+    }
+
+    private List<RegisteredUser> extractUsersFromResultSet(ResultSet rs) throws SQLException {
+        List<RegisteredUser> users = new ArrayList<>();
+        while (rs.next()) {
+            try {
                 Long id = rs.getLong("id");
                 String name = rs.getString("name");
                 String email = rs.getString("email");
@@ -27,52 +60,58 @@ public class RecommendationEngineRepository {
                 List<Movie> likedMovies = getLikedMoviesByUserId(user.getId());
                 user.setLikedMovies(likedMovies);
                 users.add(user);
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
         return users;
     }
 
-    public List<Movie> getAllMovies() {
-        String query = "SELECT * FROM movie";
+
+    public Map<Long, Movie> getAllMoviesMap() {
         List<Movie> movies = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
+             ResultSet rs = stmt.executeQuery(GET_ALL_MOVIES_QUERY)) {
 
             while (rs.next()) {
-                Movie movie = new Movie();
-                movie.setId(rs.getLong("id"));
-                movie.setTitle(rs.getString("title"));
-                movie.setReleaseDate(rs.getDate("releaseDate"));
-                movie.setDirector(rs.getString("director"));
-                movie.setAverageRating(rs.getDouble("average_rating"));
+                try {
+                    Movie movie = new Movie();
+                    movie.setId(rs.getLong("id"));
+                    movie.setTitle(rs.getString("title"));
+                    movie.setReleaseDate(rs.getDate("releaseDate"));
+                    movie.setDirector(rs.getString("director"));
+                    movie.setAverageRating(rs.getDouble("average_rating"));
 
-                List<Genre> genres = getGenresByMovieId(movie.getId());
-                movie.setGenre(genres);
+                    List<Genre> genres = getGenresByMovieId(movie.getId());
+                    movie.setGenre(genres);
 
-                List<Actor> cast = getActorsByMovieId(movie.getId());
-                movie.setCast(cast);
+                    List<Actor> cast = getActorsByMovieId(movie.getId());
+                    movie.setCast(cast);
 
-                movies.add(movie);
+                    movies.add(movie);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return movies;
+
+        return movies.stream()
+                .collect(Collectors.toMap(
+                        Movie::getId,
+                        movie -> movie,
+                        (existing, replacement) -> existing
+                ));
     }
 
     public List<Movie> getLikedMoviesByUserId(Long userId) {
-        String query = "SELECT m.* FROM movie m " +
-                "JOIN user_watchlist uw ON m.id = uw.movie_id " +
-                "WHERE uw.user_id = ?";
-
         List<Movie> movies = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(GET_LIKED_MOVIES_BY_USER_ID_QUERY)) {
 
             stmt.setLong(1, userId);
 
@@ -100,15 +139,32 @@ public class RecommendationEngineRepository {
         return movies;
     }
 
-    private List<Genre> getGenresByMovieId(Long movieId) {
-        String query = "SELECT dg.* FROM def_genre dg " +
-                "JOIN n2n_movie_to_genre mtg ON dg.id = mtg.genre_id " +
-                "WHERE mtg.movie_id = ?";
+    public Map<Long, User> getAllUsersMap() {
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(GET_ALL_REGISTERED_USERS_QUERY)) {
 
+            return extractUsersFromResultSet(rs)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            RegisteredUser::getId,
+                            user -> user,
+                            (existing, replacement) -> existing
+                    ));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new HashMap<>();
+    }
+
+
+    private List<Genre> getGenresByMovieId(Long movieId) {
         List<Genre> genres = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(GET_GENRES_BY_MOVIE_ID_QUERY)) {
 
             stmt.setLong(1, movieId);
 
@@ -126,33 +182,11 @@ public class RecommendationEngineRepository {
         return genres;
     }
 
-    public Map<Long, User> getAllUsersMap() {
-        List<RegisteredUser> userList = getAllRegisteredUsers();
-        Map<Long, User> userMap = new HashMap<>();
-        for (RegisteredUser u : userList) {
-            userMap.put(u.getId(), u);
-        }
-        return userMap;
-    }
-
-    public Map<Long, Movie> getAllMoviesMap() {
-        List<Movie> movieList = getAllMovies();
-        Map<Long, Movie> movieMap = new HashMap<>();
-        for (Movie m : movieList) {
-            movieMap.put(m.getId(), m);
-        }
-        return movieMap;
-    }
-
     private List<Actor> getActorsByMovieId(Long movieId) {
-        String query = "SELECT a.* FROM actor a " +
-                "JOIN n2n_movie_to_actor mta ON a.id = mta.actor_id " +
-                "WHERE mta.movie_id = ?";
-
         List<Actor> actors = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(GET_ACTORS_BY_MOVIE_ID_QUERY)) {
 
             stmt.setLong(1, movieId);
 
@@ -171,5 +205,4 @@ public class RecommendationEngineRepository {
         }
         return actors;
     }
-
 }

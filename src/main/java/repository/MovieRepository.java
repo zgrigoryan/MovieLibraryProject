@@ -4,17 +4,28 @@ import model.*;
 import java.sql.*;
 import java.util.*;
 
+import static repository.Settings.*;
+
 public class MovieRepository {
 
-    private static final String URL = "jdbc:postgresql://localhost:5432/mydb";
-    private static final String USER = "admin";
-    private static final String PASSWORD = "password";
+    private static final String ADD_MOVIE_QUERY =
+            "INSERT INTO movie (title, releaseDate, director, average_rating) VALUES (?, ?, ?, ?)";
+
+    private static final String UPDATE_MOVIE_QUERY =
+            "UPDATE movie SET title = ?, releaseDate = ?, director = ?, average_rating = ? WHERE id = ?";
+
+    private static final String DELETE_MOVIE_QUERY =
+            "DELETE FROM movie WHERE id = ?";
+
+    private static final String SEARCH_MOVIES_QUERY =
+            "SELECT * FROM movie WHERE " +
+                    "(? IS NULL OR title ILIKE ?) " +
+                    "AND (? IS NULL OR EXISTS (SELECT 1 FROM n2n_movie_to_genre WHERE movie_id = movie.id AND genre_id = ?)) " +
+                    "AND (? IS NULL OR director = ?)";
 
     public void addMovie(Movie movie) {
-        String query = "INSERT INTO movie (title, releaseDate, director, average_rating) VALUES (?, ?, ?, ?)";
-
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(ADD_MOVIE_QUERY, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, movie.getTitle());
             stmt.setDate(2, new java.sql.Date(movie.getReleaseDate().getTime()));
@@ -36,10 +47,8 @@ public class MovieRepository {
     }
 
     public void updateMovie(Movie movie) {
-        String query = "UPDATE movie SET title = ?, releaseDate = ?, director = ?, average_rating = ? WHERE id = ?";
-
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(UPDATE_MOVIE_QUERY)) {
 
             stmt.setString(1, movie.getTitle());
             stmt.setDate(2, new java.sql.Date(movie.getReleaseDate().getTime()));
@@ -54,10 +63,8 @@ public class MovieRepository {
     }
 
     public void deleteMovie(Long movieId) {
-        String query = "DELETE FROM movie WHERE id = ?";
-
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(DELETE_MOVIE_QUERY)) {
 
             stmt.setLong(1, movieId);
             stmt.executeUpdate();
@@ -67,15 +74,10 @@ public class MovieRepository {
     }
 
     public List<Movie> searchMovies(String keyword, Genre genre, String director) {
-        String query = "SELECT * FROM movie WHERE " +
-                "(? IS NULL OR title ILIKE ?) " +
-                "AND (? IS NULL OR EXISTS (SELECT 1 FROM n2n_movie_to_genre WHERE movie_id = movie.id AND genre_id = ?)) " +
-                "AND (? IS NULL OR director = ?)";
-
         List<Movie> movies = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(SEARCH_MOVIES_QUERY)) {
 
             stmt.setString(1, keyword);
             stmt.setString(2, "%" + keyword + "%");

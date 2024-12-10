@@ -26,19 +26,33 @@ public class RegisteredUserService {
     public boolean login(String email, String password) {
         User foundUser = userRepository.getAllUsers().stream()
                 .filter(u -> u.getEmail().equalsIgnoreCase(email) && u.getPassword().equals(password))
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElseThrow(() -> new InvalidCredentialsException("Login failed. Invalid email or password."));
 
-        if (foundUser != null && foundUser instanceof RegisteredUser) {
-            this.user = (RegisteredUser)foundUser;
+        if (foundUser instanceof RegisteredUser) {
+            this.user = (RegisteredUser) foundUser;
             System.out.println(user.getName() + " logged in successfully!");
             return true;
+        } else {
+            throw new InvalidCredentialsException("Login failed. User is not a registered user.");
         }
-        System.out.println("Login failed. Invalid email or password.");
-        return false;
     }
 
-    // TODO
-    // followedUsers, ratedMovies, reviews tables should be added to mydb
+    public void addToList(String listName, Movie movie) {
+        MovieList list = movieListRepository.getMovieListByName(user.getId(), listName)
+                .orElseThrow(() -> new NoSuchListException("List does not exist: " + listName));
+
+        movieListRepository.addMovieToList(list.getId(), movie.getId());
+        list.addMovie(movie);
+        System.out.println("\"" + movie.getTitle() + "\" added to the list \"" + listName + "\".");
+    }
+
+    public void viewList(String listName) {
+        MovieList movieList = movieListRepository.getMovieListByName(user.getId(), listName)
+                .orElseThrow(() -> new NoSuchListException("List does not exist: " + listName));
+
+        System.out.println(movieList);
+    }
     public void followUser(User otherUser) {
         System.out.println(user.getName() + " is now following " + otherUser.getName());
     }
@@ -58,26 +72,6 @@ public class RegisteredUserService {
     public void createList(String name, String description) {
         movieListRepository.createMovieList(user.getId(), name, description);
         System.out.println(user.getName() + " created a list: " + name + " - " + description);
-    }
-
-    public void addToList(String listName, Movie movie) {
-        MovieList list = movieListRepository.getMovieListByName(user.getId(), listName);
-        if (list != null) {
-            movieListRepository.addMovieToList(list.getId(), movie.getId());
-            list.addMovie(movie);
-            System.out.println("\"" + movie.getTitle() + "\" added to the list \"" + listName + "\".");
-        } else {
-            System.out.println("List \"" + listName + "\" does not exist.");
-        }
-    }
-
-    public void viewList(String listName) {
-        MovieList movieList = movieListRepository.getMovieListByName(user.getId(), listName);
-        if (movieList != null) {
-            System.out.println(movieList);
-        } else {
-            System.out.println("List \"" + listName + "\" does not exist.");
-        }
     }
 
     public void addToWatchlist(Movie movie) {
@@ -100,4 +94,17 @@ public class RegisteredUserService {
 
         return new ArrayList<>(recommendationSet).subList(0, Math.min(n, recommendationSet.size()));
     }
+
+    private class InvalidCredentialsException extends RuntimeException {
+        public InvalidCredentialsException(String message) {
+            super(message);
+        }
+    }
+
+    private class NoSuchListException extends RuntimeException {
+        public NoSuchListException(String message) {
+            super(message);
+        }
+    }
+
 }

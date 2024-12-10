@@ -4,30 +4,41 @@ import model.*;
 import java.sql.*;
 import java.util.*;
 
+import static repository.Settings.*;
+
 public class MovieListRepository {
-    private static final String URL = "jdbc:postgresql://localhost:5432/mydb";
-    private static final String USER = "admin";
-    private static final String PASSWORD = "password";
+
+    private static final String ADD_MOVIE_TO_LIST_QUERY =
+            "INSERT INTO n2n_list_to_movie (list_id, movie_id) VALUES (?, ?)";
+
+    private static final String CREATE_MOVIE_LIST_QUERY =
+            "INSERT INTO movielist (user_id, name, description) VALUES (?, ?, ?)";
+
+    private static final String GET_MOVIE_LIST_BY_NAME_QUERY =
+            "SELECT * FROM movielist WHERE user_id = ? AND name = ?";
+
+    private static final String GET_MOVIES_FOR_LIST_QUERY =
+            "SELECT m.* FROM movie m JOIN n2n_list_to_movie lm ON m.id = lm.movie_id WHERE lm.list_id = ?";
 
     public void createMovieList(Long userId, String name, String description) {
-        String query = "INSERT INTO movielist (user_id, name, description) VALUES (?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(CREATE_MOVIE_LIST_QUERY)) {
 
             stmt.setLong(1, userId);
             stmt.setString(2, name);
             stmt.setString(3, description);
             stmt.executeUpdate();
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    public MovieList getMovieListByName(Long userId, String listName) {
-        String query = "SELECT * FROM movielist WHERE user_id = ? AND name = ?";
-        MovieList movieList = null;
+    public Optional<MovieList> getMovieListByName(Long userId, String listName) {
+        MovieList movieList;
+
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(GET_MOVIE_LIST_BY_NAME_QUERY)) {
 
             stmt.setLong(1, userId);
             stmt.setString(2, listName);
@@ -40,33 +51,34 @@ public class MovieListRepository {
                     for (Movie m : movies) {
                         movieList.addMovie(m);
                     }
+                    return Optional.of(movieList);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return movieList;
+
+        return Optional.empty();
     }
 
-
     public void addMovieToList(Long listId, Long movieId) {
-        String query = "INSERT INTO n2n_list_to_movie (list_id, movie_id) VALUES (?, ?)";
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(ADD_MOVIE_TO_LIST_QUERY)) {
 
             stmt.setLong(1, listId);
             stmt.setLong(2, movieId);
             stmt.executeUpdate();
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     private List<Movie> getMoviesForList(Long listId) {
-        String query = "SELECT m.* FROM movie m JOIN n2n_list_to_movie lm ON m.id = lm.movie_id WHERE lm.list_id = ?";
         List<Movie> movies = new ArrayList<>();
+
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(GET_MOVIES_FOR_LIST_QUERY)) {
 
             stmt.setLong(1, listId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -83,6 +95,7 @@ public class MovieListRepository {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return movies;
     }
 }

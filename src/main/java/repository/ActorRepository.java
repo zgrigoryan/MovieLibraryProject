@@ -2,17 +2,28 @@ package repository;
 
 import model.*;
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 
-public class ActorRepository {
-    private static final String URL = "jdbc:postgresql://localhost:5432/mydb";
-    private static final String USER = "admin";
-    private static final String PASSWORD = "password";
+import static repository.Settings.*;
 
-    public Actor getActorById(Long id) {
-        String query = "SELECT * FROM actor WHERE id = ?";
+public class ActorRepository {
+
+    private static final String GET_ACTOR_BY_ID_QUERY =
+            "SELECT * FROM actor WHERE id = ?";
+
+    private static final String ADD_ACTOR_QUERY =
+            "INSERT INTO actor (firstName, lastName, dateOfBirth, awards) VALUES (?, ?, ?, ?)";
+
+    private static final String UPDATE_ACTOR_QUERY =
+            "UPDATE actor SET firstName = ?, lastName = ?, dateOfBirth = ?, awards = ? WHERE id = ?";
+
+    private static final String DELETE_ACTOR_QUERY =
+            "DELETE FROM actor WHERE id = ?";
+
+    public Optional<Actor> getActorById(Long id) {
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(GET_ACTOR_BY_ID_QUERY)) {
 
             stmt.setLong(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -22,25 +33,25 @@ public class ActorRepository {
                     actor.setFirstName(rs.getString("firstName"));
                     actor.setLastName(rs.getString("lastName"));
                     actor.setDateOfBirth(rs.getDate("dateOfBirth"));
-                    return actor;
+                    return Optional.of(actor);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return null;
+        return Optional.empty();
     }
 
     public void addActor(Actor actor) {
-        String query = "INSERT INTO actor (firstName, lastName, dateOfBirth, awards) VALUES (?, ?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(ADD_ACTOR_QUERY, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, actor.getFirstName());
             stmt.setString(2, actor.getLastName());
             stmt.setDate(3, new java.sql.Date(actor.getDateOfBirth().getTime()));
             stmt.setString(4, actor.getAwards().toString());
             stmt.executeUpdate();
+
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
                     actor.setId(rs.getLong(1));
@@ -52,15 +63,14 @@ public class ActorRepository {
     }
 
     public void updateActor(Actor actor) {
-        String query = "UPDATE actor SET firstName = ?, lastName = ?, dateOfBirth = ?, awards = ? WHERE id = ?";
-
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(UPDATE_ACTOR_QUERY)) {
 
             stmt.setString(1, actor.getFirstName());
             stmt.setString(2, actor.getLastName());
-            stmt.setDate(3, new java.sql.Date(actor.getDateOfBirth().getTime()));
+            stmt.setDate(3, new Date(actor.getDateOfBirth().getTime()));
             stmt.setString(4, actor.getAwards().toString());
+            stmt.setLong(5, actor.getId());
 
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -68,11 +78,9 @@ public class ActorRepository {
         }
     }
 
-    public void deleteMovie(Long actorId) {
-        String query = "DELETE FROM actor WHERE id = ?";
-
+    public void deleteActor(Long actorId) {
         try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(DELETE_ACTOR_QUERY)) {
 
             stmt.setLong(1, actorId);
             stmt.executeUpdate();
