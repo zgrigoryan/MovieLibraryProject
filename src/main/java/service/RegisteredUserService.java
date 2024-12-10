@@ -2,6 +2,7 @@ package service;
 
 import model.*;
 import repository.*;
+import exception.*;
 import java.util.*;
 
 public class RegisteredUserService {
@@ -94,17 +95,4 @@ public class RegisteredUserService {
 
         return new ArrayList<>(recommendationSet).subList(0, Math.min(n, recommendationSet.size()));
     }
-
-    private class InvalidCredentialsException extends RuntimeException {
-        public InvalidCredentialsException(String message) {
-            super(message);
-        }
-    }
-
-    private class NoSuchListException extends RuntimeException {
-        public NoSuchListException(String message) {
-            super(message);
-        }
-    }
-
 }
